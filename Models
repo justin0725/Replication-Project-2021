@@ -6,7 +6,7 @@ panelA_models <- feols(data = model_df %>% filter(year <= 2014),
                                 cluster = c("statefip", "year"), # this lines does clustered standard errors - can't do both it and the above line together
                                 collin.tol = 0.000000000000000000001,
                                 fml =
-                                  # outcome variables
+                    # outcome variables
                                   c(outcome_worked_last_week,
                                     outcome_labor_force,
                                     outcome_unemployed,
@@ -16,6 +16,7 @@ panelA_models <- feols(data = model_df %>% filter(year <= 2014),
                                     outcome_self_employed,
                                     outcome_school_attendance,
                                     outcome_ged) ~
+                     # independant variables
                                   eligible +
                                   after_daca +
                                   did_term +
@@ -26,6 +27,7 @@ panelA_models <- feols(data = model_df %>% filter(year <= 2014),
                                   demo_asian +
                                   demo_married +
                                   state_unemployment |
+                       # fixed effects
                                   demo_age +
                                   age_of_entry +
                                   year +
