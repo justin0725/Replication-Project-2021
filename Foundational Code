@@ -16,16 +16,18 @@ acs_over24_df <- haven::read_stata("/Users/justingiles/Desktop/Grad School/MPP F
 acs_under24_df <- haven::read_stata("/Users/justingiles/Desktop/Grad School/MPP Fall 2020/Stats/Replication Project/ACS_PPS813_F2021_15to24.dta")
 
 # append data
-acs_df <- rbind.data.frame(acs_over24_df, acs_under24_df)
+original <- rbind.data.frame(acs_over24_df, acs_under24_df)
 
-## DACA ELIGIBILITY - this section mostly copied from Joe's code with some minor changes
+## DACA ELIGIBILITY
 # 1) no lawful status as of June 15, 2012
 # 2) applicants came to US before age 16
 # 3) under the age of 31 as of June 2012
 # 4) continuously resided in US since June 2007
 # 5) high school diploma or GED
 # 6) no felony
-acs <- acs_df %>% 
+
+acs <- original %>% 
+  filter(age>=18 & age<=35) %>%
   filter(educ >= 6) %>% # filter to only high school grads and up / believe this is already done
   mutate(qob_age_adjustment = case_when(birthqtr <= 2 ~ 0,
                                         birthqtr > 2 ~ 1,
@@ -75,7 +77,7 @@ prep <- acs %>%
          high_school = ifelse((educd>=62 & educd<=64), 1, 0),
          some_college = ifelse((educd>=65 & educd<=100), 1, 0),
          college_degree = ifelse((educd>=101 & educd<=116), 1, 0),
-  # this is the dividing point between variables used in Table 1 and variables used only in models and graphs
+         # this is the dividing point between variables used in Table 1 and variables used only in models and graphs
          after = ifelse(year>2012, 1, 0),
          #inc_adjusted = case_when(inctot < 0 ~ 0,
                                   #inctot >= 0 ~ inctot),
@@ -87,7 +89,7 @@ prep <- acs %>%
 
 
 ##############################################################################
-# State unemployment section - copied from Joe's code with my data frame names put in
+# State unemployment section
 ######################################
 ###################
 # create state/year unemployment level variable
@@ -103,10 +105,15 @@ prep <- prep %>%
 # END State unemployment section
 ############################################################################
 
-# frequently will use data frame limited to 'noncitizen_daca' and 'noncitizen_nondaca'
+
+
+# fequently use data limited to non-citizens
 noncit <- filter(prep,
                  eligibility_groups=='noncitizen_daca' |
                   eligibility_groups=='noncitizen_nondaca')
+# frequently use data limited to non-citizens between ages 18 and 35
+noncit.18to35 <- noncit %>% filter(age>=18 & age<=35)
+  
 
-# clear up some memory
-rm(acs_over24_df, acs_under24_df, acs_df)
+# this stuff takes up a LOT of room, so I'm removing all of the big stuff that won't be used again
+rm(acs_over24_df, acs_under24_df, original, acs, state_unemployed)
