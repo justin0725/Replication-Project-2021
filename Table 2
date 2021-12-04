@@ -1,0 +1,88 @@
+# Source the 'Foundational Code' Script
+# provides the needed data frames
+source("/Users/justingiles/Desktop/Grad School/MPP Fall 2020/Stats/Replication Project/R scripts/Foundational Code.R")
+
+# Source the 'get_panel function' script
+# provides the 'get_panel()' function
+# when given one of our data frames, this function returns a data frame of all the the values in a table 2 panel
+source("/Users/justingiles/Desktop/Grad School/MPP Fall 2020/Stats/Replication Project/R scripts/get_panel function.R")
+
+
+######################################################### Get data frames of each panel's info
+# Panel A: entered US between ages 12 and 19
+panelA_df <- get_panel(noncit %>%
+                         filter(year<=2014) %>%
+                         filter(age_of_entry>=12 & age_of_entry<=19)
+                       )
+# Panel B: ages 27 to 34 in June 2012 and entered US before age 16
+panelB_df <- get_panel(noncit %>%
+                         filter(year<=2014) %>%
+                         filter(age_june_2012>=27 & age_june_2012<=34) %>%
+                         filter(age_of_entry < 16)
+                       )
+# Panel C: all non-citizens ages 18 to 35 with at least a high school degree
+panelC_df <- get_panel(noncit.18to35 %>%
+                         filter(year<=2014)
+                       )
+# Panel D: all citizens and non-citizens ages 18 to 35 with at least a high school degree
+panelD_df <- get_panel(prep %>%
+                         filter(age>=18 & age<=35) %>%
+                         filter(year<=2014) %>%
+                         # next line sets all "eligible" values to 0 if it's for a US citizen
+                         mutate(eligible = ifelse(citizen >= 0 & citizen <= 2, 0, eligible)
+                                )
+                       )
+
+######################################################### Format panel data frames into a table using gt package
+
+# combine all data frames into one
+table2_df <- rbind(panelA_df, panelB_df, panelC_df, panelD_df)
+
+# make footer for table 2 (copied from paper)
+table2_footer <- paste(
+  "Note: Table 2 reports the estimates from Eq. (1) for four separate samples. All four samples are restricted to",
+  "individuals with at least a high school degree. Panel A uses the sample of non-citizens who entered the United States between",
+  "the ages of 12 and 19. Panel B uses the sample of non-citizens between the ages of 27 and 34 who arrived in the United States before",
+  "the age of 16. Panel C uses the sample of non-citizens between the ages of 18 and 35. Panel D uses the",
+  "sample of citizens and non-citizens between the ages of 18 and 35. Each column indicates the outcome variable of interest.",
+  "The first row of each panel reports the estimated coefficient on the interaction term. The second row reports",
+  "the estimated coefficient on the DACA-eligibility variable. Standard errors are clustered at the state-year level.",
+  "*** Significant at the 1% level. ** Significant at the 5% level. * Significant at the 10% level.",
+  sep = " ")
+
+# make the table
+library(gt)
+table2 <- gt(table2_df) %>%
+  tab_row_group(label="Panel D: all citizens and non-citizens ages 18 to 35 with at least a high school degree",
+                rows=19:24) %>%
+  tab_row_group(label="Panel C: all non-citizens ages 18 to 35 with at least a high school degree",
+                rows=13:18) %>%
+  tab_row_group(label="Panel B: ages 27 to 34 in June 2012 and entered US before age 16",
+                rows=7:12) %>%
+  tab_row_group(label="Panel A: entered US between ages 12 and 19",
+                rows=1:6) %>%
+  tab_source_note(source_note = table2_footer) %>%
+  tab_header( # adds a header
+    title = "Table 2",
+    subtitle = "The effect of DACA on labor market and education outcomes."
+  ) %>%
+  opt_align_table_header( # left align the header
+    align = "left"
+  ) %>%
+  opt_table_font( # add a font from Google
+    font = google_font(name = "Merriweather")
+  ) %>%
+  tab_options( # set font size and other attributes
+    table.font.size = 12,
+    heading.title.font.size = 18,
+    heading.title.font.weight = "bold", # doesn't seem to work
+   data_row.padding = 2, # decreases space between rows
+    table_body.hlines.color = "white" # takes away lines between rows
+    # container.width = 500
+  )
+
+# save table 2 as png file
+gtsave(table2,
+       "table 2.png",
+       path = "/Users/justingiles/Desktop/Grad School/MPP Fall 2020/Stats/Replication Project/"
+       )
