@@ -18,14 +18,13 @@ acs_under24_df <- haven::read_stata("/Users/justingiles/Desktop/Grad School/MPP 
 # append data
 acs_df <- rbind.data.frame(acs_over24_df, acs_under24_df)
 
-## DACA ELIGIBILITY
+## DACA ELIGIBILITY - this section mostly copied from Joe's code with some minor changes
 # 1) no lawful status as of June 15, 2012
 # 2) applicants came to US before age 16
 # 3) under the age of 31 as of June 2012
 # 4) continuously resided in US since June 2007
 # 5) high school diploma or GED
 # 6) no felony
-
 acs <- acs_df %>% 
   filter(educ >= 6) %>% # filter to only high school grads and up / believe this is already done
   mutate(qob_age_adjustment = case_when(birthqtr <= 2 ~ 0,
@@ -43,17 +42,21 @@ acs <- acs_df %>%
                                         citizen == 3 & eligible == 0 ~ 'noncitizen_nondaca')
   )
 
+
+
 # make variables for each row of Table 1
 # already in dataset in usable form:
 # income: inctot
 # usual hours worked per week: uhrswork
 # years in the US: yrsusa1
 # age of entry: age_of_entry
-# age: age
+# age" age
 # prep data frame has new variables of interest; will be used throughout analysis
 prep <- acs %>%
-  filter(age>=18 & age<=35) %>%
-  mutate(working = ifelse(wrklstwk==2, 1, 0), # create relevant variables where they don't already exist
+  mutate(working = case_when(wrklstwk == 2 ~ 1, # create relevant variables where they don't already exist
+                             wrklstwk == 3 ~ -9, # nonresponse is -9
+                             TRUE ~ 0),
+         working = ifelse(working == -9, NA, working), # recode -9 as NA so regression won't use it
          in_labor_force = ifelse(labforce==2, 1, 0),
          unemployed = ifelse(empstat==2, 1, 0),
          worked_past_year = ifelse(workedyr==3, 1, 0),
@@ -72,20 +75,38 @@ prep <- acs %>%
          high_school = ifelse((educd>=62 & educd<=64), 1, 0),
          some_college = ifelse((educd>=65 & educd<=100), 1, 0),
          college_degree = ifelse((educd>=101 & educd<=116), 1, 0),
-         # this is the dividing point between variables used in Table 1 and variables used only in models and graphs
-         after = ifelse(year>2012, 1, 0)
-         #inc_adjusted = casewhen(inctot < 0 ~ 0,
+  # this is the dividing point between variables used in Table 1 and variables used only in models and graphs
+         after = ifelse(year>2012, 1, 0),
+         #inc_adjusted = case_when(inctot < 0 ~ 0,
                                   #inctot >= 0 ~ inctot),
          #loginc_plusone = (inc_adjusted + 1) %>% log()
+         poverty_binary = case_when(poverty==0 ~ -100,
+                                    (poverty>=1 & poverty<=100) ~ 1,
+                                    poverty>100 ~ 0)
          )
 
-# must use data set limited to 'noncitizen_daca' and 'noncitizen_nondaca'
-# for models and for figures 2-5
+
+##############################################################################
+# State unemployment section - copied from Joe's code with my data frame names put in
+######################################
+###################
+# create state/year unemployment level variable
+state_unemployed <- prep %>% 
+  filter(unemployed != -9) %>% 
+  group_by(year, statefip) %>% 
+  summarise(state_unemployment = mean(unemployed))
+# join on state/year unemployment and select columns of interest
+# filter to only non-citizens
+prep <- prep %>% 
+  left_join(state_unemployed, by = c("year", "statefip"))
+################################
+# END State unemployment section
+############################################################################
+
+# frequently will use data frame limited to 'noncitizen_daca' and 'noncitizen_nondaca'
 noncit <- filter(prep,
                  eligibility_groups=='noncitizen_daca' |
                   eligibility_groups=='noncitizen_nondaca')
-  
 
-# this stuff takes up a LOT of room, so I'm removing all of the big stuff besides acs
-# so that when I source this script the other scripts are able to run
+# clear up some memory
 rm(acs_over24_df, acs_under24_df, acs_df)
