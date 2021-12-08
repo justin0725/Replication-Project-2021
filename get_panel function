@@ -4,6 +4,7 @@
 # the data frame returned is structured similarly to the panels in table 2 as seen in the paper,
 # which allows it to be easily formatted later with the gt package
 
+
 get_panel <- function(df) {
   library(fixest)
   # Estimate all models for a panel
@@ -12,7 +13,7 @@ get_panel <- function(df) {
                   cluster = c("statefip^year"),
                   collin.tol = 0.000000000000000000001,
                   fml =
-           # outcome variables
+                    # outcome variables
                     c(working,
                       in_labor_force,
                       unemployed,
@@ -22,7 +23,7 @@ get_panel <- function(df) {
                       self_employed,
                       in_school,
                       has_GED) ~
-          # independant variables
+                    # independant variables
                     eligible:after +
                     eligible +
                     after +
@@ -33,7 +34,7 @@ get_panel <- function(df) {
                     asian +
                     married +
                     state_unemployment |
-          # fixed effects
+                    # fixed effects
                     age +
                     age_of_entry +
                     year +
@@ -41,7 +42,7 @@ get_panel <- function(df) {
                     statefip^year
   ) ####### END OF REGRESSION PART
   
-# Make column and row labels
+  # Make column and row labels
   columns_key <- c("Variables",
                    "Working",
                    "Labor Force",
@@ -59,7 +60,7 @@ get_panel <- function(df) {
                "Observations",
                "R-squared")
   
-# empty vectors to be filled with coefficients, standard errors, observation number, r-squared
+  # empty vectors to be filled with coefficients, standard errors, observation number, r-squared
   did <- c() 
   elig <- c()
   d.se <- c()
@@ -67,7 +68,7 @@ get_panel <- function(df) {
   obs <- c()
   rsq <- c()
   
-# extract coefficients, standard errors, observation number, r-squared, and append to above vectors
+  # extract coefficients, standard errors, observation number, r-squared, and append to above vectors
   for (i in 1:9) {
     did <- models[[i]]$coefficients[["eligible:after"]] %>%
       round(digits = 3) %>%
@@ -87,42 +88,41 @@ get_panel <- function(df) {
       round(digits = 3) %>%
       append(rsq, .)
     # get p-values
-    did_pvalue <- (as.numeric(did[i]) / as.numeric(d.se[i])) %>%
-      pt(df=obs[i]-1, lower.tail=FALSE) %>% multiply_by(2)
-    elig_pvalue <- (as.numeric(elig[i]) / as.numeric(e.se[i])) %>%
-      pt(df=obs[i]-1, lower.tail=FALSE) %>% multiply_by(2)
+    #did_pvalue <- (as.numeric(did[i]) / as.numeric(d.se[i])) %>%
+    # pt(df=obs[i]-1, lower.tail=FALSE) %>% multiply_by(2)
+    #elig_pvalue <- (as.numeric(elig[i]) / as.numeric(e.se[i])) %>%
+    #pt(df=obs[i]-1, lower.tail=FALSE) %>% multiply_by(2)
     # add *** or ** or * for significance
     # for DiD coeffs
-    if (did_pvalue <= 0.01) {
+    if ((as.numeric(did[i])/as.numeric(d.se[i])) %>% abs() >= 2.58) {
       did[i] <- paste(did[i], "***", sep = "")
-    } else if (did_pvalue <= 0.05) {
+    } else if ((as.numeric(did[i])/as.numeric(d.se[i])) %>% abs() >= 1.96) {
       did[i] <- paste(did[i], "**", sep = "")
-    } else if (did_pvalue <= 0.10) {
+    } else if ((as.numeric(did[i])/as.numeric(d.se[i])) %>% abs() >= 1.645) {
       did[i] <- paste(did[i], "*", sep = "")
     } else {}
     # for eligible coeffs
-    if (elig_pvalue <= 0.01) {
+    if ((as.numeric(elig[i])/as.numeric(e.se[i])) %>% abs() <= 2.58) {
       elig[i] <- paste(elig[i], "***", sep = "")
-    } else if (elig_pvalue <= 0.05) {
+    } else if ((as.numeric(elig[i])/as.numeric(e.se[i])) %>% abs() <= 1.96) {
       elig[i] <- paste(elig[i], "**", sep = "")
-    } else if (elig_pvalue <= 0.10) {
+    } else if ((as.numeric(elig[i])/as.numeric(e.se[i])) %>% abs()  <= 1.645) {
       elig[i] <- paste(elig[i], "*", sep = "")
     } else {}
-# add parantheses around the standard errors
+    # add parantheses around the standard errors
     d.se[i] <- d.se[i] %>% paste("(", ., sep = "") %>%
       paste(")", sep = "")
     e.se[i] <- e.se[i] %>% paste("(", ., sep = "") %>%
       paste(")", sep = "")
   }
   
-# combine above vectors into a data frame
+  # combine above vectors into a data frame
   panel <- rbind(did, d.se, elig, e.se, obs, rsq) %>%
     as.data.frame() %>%
     cbind(row_key, .)
   colnames(panel) <- columns_key
   
-# return the data frame
+  # return the data frame
   panel
   
 } ########### END FUNCTION
-
