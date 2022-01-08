@@ -3,13 +3,11 @@ setwd("/Users/justingiles/Desktop/Grad School/MPP Fall 2020/Stats/Replication Pr
 # load packages
 library(haven)
 library(tidyverse)
-library(config)
 library(purrr)
 library(magrittr)
 
-# import config
-config <- config::get()
-policy_year <- config$policy_year
+# hard coded values
+policy_year <- 2012
 
 # read in data
 acs_over24_df <- haven::read_stata("/Users/justingiles/Desktop/Grad School/MPP Fall 2020/Stats/Replication Project/ACS_PPS813_F2021_revised.dta")
